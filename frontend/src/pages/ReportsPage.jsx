@@ -97,11 +97,11 @@ export const ReportsPage = () => {
             Lab Reports & OCR Analysis
           </h1>
           <p className="text-sub">
-            Upload blood lab tests or diagnostic scans for automatic Tesseract OCR text & biomarker parsing.
+            Upload blood lab tests (PDF, PNG, JPG) or diagnostic scans for automatic text & biomarker parsing.
           </p>
         </div>
         <div className="badge badge-teal" style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}>
-          Tesseract.js OCR Powered
+          PDF & Tesseract.js OCR Powered
         </div>
       </div>
 
@@ -146,12 +146,12 @@ export const ReportsPage = () => {
                 {selectedFile ? selectedFile.name : 'Click or Drag & Drop File'}
               </div>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginTop: '0.3rem' }}>
-                Supports PNG, JPG, JPEG lab scans
+                Supports PDF, PNG, JPG, JPEG lab reports & scans
               </p>
               <input
                 id="report-file-input"
                 type="file"
-                accept="image/*"
+                accept="image/*,application/pdf,.pdf"
                 onChange={handleFileChange}
                 style={{ display: 'none' }}
               />
@@ -190,7 +190,7 @@ export const ReportsPage = () => {
               </div>
             ) : reports.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-dim)' }}>
-                No lab reports uploaded yet. Upload a blood lab test image on the left!
+                No lab reports uploaded yet. Upload a PDF or blood lab test image on the left!
               </div>
             ) : (
               reports.map((report) => (
@@ -226,7 +226,7 @@ export const ReportsPage = () => {
                         disabled={ocrRunning[report._id]}
                       >
                         <RefreshCw size={14} className={ocrRunning[report._id] ? 'pulse-glow' : ''} />
-                        {ocrRunning[report._id] ? 'Running OCR...' : 'Run OCR'}
+                        {ocrRunning[report._id] ? 'Extracting Text...' : 'Run Extraction'}
                       </button>
 
                       {report.extractedText && (
@@ -274,7 +274,7 @@ export const ReportsPage = () => {
                   {activeReportText === report._id && report.extractedText && (
                     <div style={{ background: 'rgba(9, 13, 22, 0.9)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(14, 165, 233, 0.3)', marginTop: '0.5rem' }}>
                       <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#38bdf8', marginBottom: '0.4rem', textTransform: 'uppercase' }}>
-                        Raw Extracted OCR Text:
+                        Raw Extracted Text:
                       </div>
                       <pre style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                         {report.extractedText}

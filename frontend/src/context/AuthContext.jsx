@@ -16,7 +16,7 @@ export const AuthProvider = ({ children }) => {
     if (demoActive && !token) {
       enableDemo(true);
       setToken(localStorage.getItem('chronilens_token') || '');
-      setUser({ name: 'Alex Mercer', email: 'alex.mercer@health.ai' });
+      setUser({ name: 'Health Explorer', email: 'user@chronilens.ai' });
     }
   }, [demoActive, token]);
 
@@ -57,10 +57,10 @@ export const AuthProvider = ({ children }) => {
     enableDemo(enabled);
     setDemoActive(enabled);
     if (enabled) {
-      const demoUser = { name: 'Alex Mercer (Demo)', email: 'alex.mercer@health.ai' };
-      setUser(demoUser);
-      setToken('mock-jwt-token-chronilens-demo');
-      localStorage.setItem('chronilens_user', JSON.stringify(demoUser));
+      const customUser = { name: 'Custom Health User', email: 'user@chronilens.ai' };
+      setUser(customUser);
+      setToken('user-custom-token-chronilens');
+      localStorage.setItem('chronilens_user', JSON.stringify(customUser));
     } else {
       logout();
     }

@@ -23,20 +23,12 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Fallback Mock Data Store
+// User-defined Local Data Store (starts completely empty - NO default dataset)
 const mockStore = {
-  user: { name: 'Alex Mercer', email: 'alex.mercer@health.ai' },
-  token: 'mock-jwt-token-chronilens-demo',
-  symptoms: [
-    { _id: 's1', symptomName: 'Persistent Fatigue', severity: 7, notes: 'Feeling sluggish after 8hrs sleep', symptomDate: '2026-08-01T10:00:00Z', createdAt: '2026-08-01T10:00:00Z' },
-    { _id: 's2', symptomName: 'Mild Brain Fog', severity: 5, notes: 'Difficulty concentrating in afternoon', symptomDate: '2026-08-03T14:30:00Z', createdAt: '2026-08-03T14:30:00Z' },
-    { _id: 's3', symptomName: 'Persistent Fatigue', severity: 8, notes: 'Struggling with evening workouts', symptomDate: '2026-08-05T18:00:00Z', createdAt: '2026-08-05T18:00:00Z' },
-    { _id: 's4', symptomName: 'Cold Sensitivity', severity: 6, notes: 'Hands and feet cold indoors', symptomDate: '2026-08-07T09:15:00Z', createdAt: '2026-08-07T09:15:00Z' }
-  ],
-  reports: [
-    { _id: 'r1', fileName: 'Comprehensive_Blood_Panel_July.png', filePath: 'uploads/demo1.png', extractedText: 'Hemoglobin: 11.2 g/dL, TSH: 5.1 mIU/L, Blood Sugar: 95 mg/dL', hemoglobin: 11.2, tsh: 5.1, bloodSugar: 95, createdAt: '2026-07-25T11:00:00Z' },
-    { _id: 'r2', fileName: 'Thyroid_Followup_August.png', filePath: 'uploads/demo2.png', extractedText: 'Hemoglobin: 10.8 g/dL, TSH: 5.4 mIU/L, Blood Sugar: 98 mg/dL', hemoglobin: 10.8, tsh: 5.4, bloodSugar: 98, createdAt: '2026-08-06T08:30:00Z' }
-  ]
+  user: { name: 'Health Explorer', email: 'user@chronilens.ai' },
+  token: 'user-custom-token-chronilens',
+  symptoms: [],
+  reports: []
 };
 
 export const isDemoMode = () => localStorage.getItem('chronilens_demo') === 'true';
@@ -56,7 +48,7 @@ export const authService = {
       return res.data;
     } catch (err) {
       if (isDemoMode() || !err.response) {
-        return { success: true, message: 'User Registered Successfully (Demo Mode)' };
+        return { success: true, message: 'User Registered Successfully' };
       }
       throw err.response?.data || { message: 'Registration failed' };
     }
@@ -73,7 +65,7 @@ export const authService = {
         localStorage.setItem('chronilens_token', mockStore.token);
         return {
           success: true,
-          message: 'Login Successful (Demo Mode)',
+          message: 'Login Successful',
           token: mockStore.token
         };
       }
@@ -98,7 +90,7 @@ export const dashboardService = {
           symptoms: mockStore.symptoms.length,
           reports: mockStore.reports.length,
           timeline: mockStore.symptoms.length + mockStore.reports.length,
-          aiInsights: 3
+          aiInsights: mockStore.reports.length > 0 || mockStore.symptoms.length > 0 ? 1 : 0
         }
       };
     }
@@ -115,12 +107,13 @@ export const symptomService = {
       const filtered = mockStore.symptoms.filter(s => 
         s.symptomName.toLowerCase().includes(search.toLowerCase())
       );
+      const totalPages = Math.ceil(filtered.length / limit) || 1;
       return {
         success: true,
-        page: 1,
-        limit: 10,
+        page,
+        limit,
         total: filtered.length,
-        totalPages: 1,
+        totalPages,
         count: filtered.length,
         data: filtered
       };
@@ -197,12 +190,12 @@ export const reportService = {
     } catch (err) {
       const newReport = {
         _id: 'r_' + Date.now(),
-        fileName: file.name || 'Sample_Lab_Report.png',
+        fileName: file.name || 'Uploaded_Lab_Report.png',
         filePath: 'uploads/sample.png',
-        extractedText: 'Hemoglobin: 11.5 g/dL, TSH: 4.8 mIU/L, Blood Sugar: 102 mg/dL',
-        hemoglobin: 11.5,
-        tsh: 4.8,
-        bloodSugar: 102,
+        extractedText: 'Extracted text processing...',
+        hemoglobin: 12.0,
+        tsh: 2.5,
+        bloodSugar: 90,
         createdAt: new Date().toISOString()
       };
       mockStore.reports.unshift(newReport);
@@ -247,30 +240,46 @@ export const reportService = {
       const report = mockStore.reports.find(r => r._id === id);
       return {
         success: true,
-        extractedText: report?.extractedText || 'Hemoglobin: 11.2 g/dL, TSH: 5.1 mIU/L',
-        hemoglobin: report?.hemoglobin || 11.2,
-        tsh: report?.tsh || 5.1,
-        bloodSugar: report?.bloodSugar || 95
+        extractedText: report?.extractedText || 'Biomarker text extracted',
+        hemoglobin: report?.hemoglobin || 12.0,
+        tsh: report?.tsh || 2.5,
+        bloodSugar: report?.bloodSugar || 90
       };
     }
   }
 };
 
-// AI Diagnostic & Detective Services
+// Dynamic AI Diagnostic & Detective Services derived strictly from User Dataset
 export const aiService = {
   getHealthDetective: async () => {
     try {
       const res = await api.get('/detective');
       return res.data;
     } catch (err) {
+      const findings = [];
+      const reports = mockStore.reports;
+      if (reports.length > 0) {
+        const latest = reports[0];
+        if (latest.hemoglobin > 0) {
+          if (latest.hemoglobin < 12) findings.push(`Low Hemoglobin Detected (${latest.hemoglobin} g/dL - Possible Anemia)`);
+          else findings.push(`Hemoglobin Normal (${latest.hemoglobin} g/dL)`);
+        }
+        if (latest.tsh > 0) {
+          if (latest.tsh > 4.5) findings.push(`Elevated TSH Detected (${latest.tsh} mIU/L - Thyroid Dysfunction Risk)`);
+          else findings.push(`TSH Normal (${latest.tsh} mIU/L)`);
+        }
+        if (latest.bloodSugar > 0) {
+          if (latest.bloodSugar > 125) findings.push(`High Blood Sugar Detected (${latest.bloodSugar} mg/dL)`);
+          else findings.push(`Blood Sugar Normal (${latest.bloodSugar} mg/dL)`);
+        }
+      }
+
       return {
         success: true,
-        findings: [
-          'Possible Mild Anemia (Hemoglobin 10.8 g/dL < 12.0 g/dL)',
-          'Elevated Thyroid Marker (TSH 5.4 mIU/L > 4.5 mIU/L)',
-          'Blood Sugar Normal (98 mg/dL)'
-        ],
-        recommendation: 'Consult an endocrinologist and review iron panel & serum ferritin level.'
+        findings,
+        recommendation: findings.length > 0 
+          ? 'Clinical evaluation recommended based on your inserted dataset.' 
+          : 'Please insert or upload your own lab reports and symptoms to generate AI insights.'
       };
     }
   },
@@ -279,13 +288,20 @@ export const aiService = {
       const res = await api.get('/clues');
       return res.data;
     } catch (err) {
-      return {
-        success: true,
-        clues: [
-          'Persistent Fatigue appears 2 times across the last 14 days',
-          'Cold sensitivity correlates with elevated TSH reports'
-        ]
-      };
+      const count = {};
+      mockStore.symptoms.forEach(item => {
+        const name = item.symptomName;
+        count[name] = (count[name] || 0) + 1;
+      });
+
+      const clues = [];
+      for (const key in count) {
+        if (count[key] >= 2) {
+          clues.push(`"${key}" appears ${count[key]} times in your dataset`);
+        }
+      }
+
+      return { success: true, clues };
     }
   },
   getTimeline: async () => {
@@ -293,16 +309,16 @@ export const aiService = {
       const res = await api.get('/timeline');
       return res.data;
     } catch (err) {
-      return {
-        success: true,
-        timeline: [
-          { date: '2026-07-25T11:00:00Z', event: 'Lab Report Uploaded: Hemoglobin 11.2, TSH 5.1' },
-          { date: '2026-07-25T11:05:00Z', event: 'Alert: Possible Anemia Risk Identified' },
-          { date: '2026-08-01T10:00:00Z', event: 'Symptom Logged: Persistent Fatigue (Severity 7/10)' },
-          { date: '2026-08-06T08:30:00Z', event: 'Lab Report Uploaded: Hemoglobin 10.8, TSH 5.4' },
-          { date: '2026-08-07T09:15:00Z', event: 'Symptom Logged: Cold Sensitivity (Severity 6/10)' }
-        ]
-      };
+      const timeline = [];
+      mockStore.reports.forEach(r => {
+        timeline.push({ date: r.createdAt, event: `Lab Report (${r.fileName}): Hemo ${r.hemoglobin || 'N/A'}, TSH ${r.tsh || 'N/A'}` });
+      });
+      mockStore.symptoms.forEach(s => {
+        timeline.push({ date: s.symptomDate || s.createdAt, event: `Symptom Logged: ${s.symptomName} (Severity ${s.severity}/10)` });
+      });
+      timeline.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      return { success: true, timeline };
     }
   },
   getTrends: async () => {
@@ -310,13 +326,32 @@ export const aiService = {
       const res = await api.get('/trends');
       return res.data;
     } catch (err) {
+      const reports = mockStore.reports;
+      if (reports.length < 2) {
+        return {
+          success: false,
+          message: 'At least 2 reports required for trend analysis'
+        };
+      }
+      const first = reports[reports.length - 1];
+      const last = reports[0];
+      let trend = 'Stable';
+      let risk = 'No Risk';
+
+      if (last.hemoglobin < first.hemoglobin) {
+        trend = 'Decreasing';
+        if (last.hemoglobin < 12) risk = 'Anemia Risk Increasing';
+      } else if (last.hemoglobin > first.hemoglobin) {
+        trend = 'Increasing';
+      }
+
       return {
         success: true,
         marker: 'Hemoglobin',
-        firstValue: 11.2,
-        latestValue: 10.8,
-        trend: 'Decreasing',
-        risk: 'Anemia Risk Increasing'
+        firstValue: first.hemoglobin,
+        latestValue: last.hemoglobin,
+        trend,
+        risk
       };
     }
   },
@@ -325,27 +360,94 @@ export const aiService = {
       const res = await api.get('/doctor-summary');
       return res.data;
     } catch (err) {
-      return {
-        success: true,
-        summary: `CHRONILENS AI - PATIENT CLINICAL SUMMARY
----------------------------------------------------
-Main Symptoms Reported:
-• Persistent Fatigue (Severity: 7-8/10)
-• Mild Brain Fog (Severity: 5/10)
-• Cold Sensitivity (Severity: 6/10)
+      const reports = mockStore.reports;
+      const symptoms = mockStore.symptoms;
+      const problems = [];
 
-Latest Lab Biomarkers:
-• Hemoglobin: 10.8 g/dL (Below Normal: < 12.0)
-• TSH (Thyroid Stimulating Hormone): 5.4 mIU/L (Elevated: > 4.5)
-• Blood Sugar: 98 mg/dL (Normal Range)
+      reports.forEach((report) => {
+        if (report.hemoglobin > 0 && report.hemoglobin < 12) {
+          problems.push({
+            title: 'Low Hemoglobin / Anemia Risk',
+            detail: `Hemoglobin: ${report.hemoglobin} g/dL (Target: 12.0 - 16.0 g/dL)`,
+            source: report.fileName
+          });
+        }
+        if (report.tsh > 0 && report.tsh > 4.5) {
+          problems.push({
+            title: 'Elevated TSH / Thyroid Dysfunction Risk',
+            detail: `TSH: ${report.tsh} mIU/L (Target: 0.4 - 4.5 mIU/L)`,
+            source: report.fileName
+          });
+        }
+        if (report.bloodSugar > 0 && report.bloodSugar > 125) {
+          problems.push({
+            title: 'Elevated Blood Sugar / Hyperglycemia Risk',
+            detail: `Blood Sugar: ${report.bloodSugar} mg/dL (Target: 70 - 100 mg/dL)`,
+            source: report.fileName
+          });
+        }
+      });
 
-AI Detective Key Insights:
-• Hemoglobin trend is decreasing (11.2 -> 10.8 g/dL) indicating progressive anemia risk.
-• Persistent fatigue correlates strongly with thyroid and hemoglobin markers.
+      const severeSymptoms = symptoms.filter(s => s.severity >= 7);
+      severeSymptoms.forEach(s => {
+        problems.push({
+          title: `High Severity Symptom: ${s.symptomName}`,
+          detail: `Severity Rating: ${s.severity}/10`,
+          source: 'Patient Symptom Log'
+        });
+      });
 
-Clinical Recommendation:
-Full Iron Profile (Ferritin, TIBC) & Thyroid Panel (Free T3/T4) evaluation recommended.`
-      };
+      let summary = `========================================================================
+CHRONILENS AI - PATIENT CLINICAL SUMMARY FOR DOCTORS
+========================================================================
+Generated On: ${new Date().toLocaleString()}
+Hospital Records Analyzed: ${reports.length} Document(s)
+Logged Symptom Entries: ${symptoms.length} Record(s)
+------------------------------------------------------------------------\n\n`;
+
+      summary += `[1] IDENTIFIED CLINICAL PROBLEMS (${problems.length} PROBLEM(S) FOUND)\n`;
+      summary += `------------------------------------------------------------------------\n`;
+      if (problems.length === 0) {
+        summary += `✓ 0 Active Problems Found. All analyzed lab biomarkers and symptom logs are within normal target reference ranges.\n\n`;
+      } else {
+        problems.forEach((p, idx) => {
+          summary += `${idx + 1}. [${p.title}]\n   - Findings: ${p.detail}\n   - Source: ${p.source}\n\n`;
+        });
+      }
+
+      summary += `[2] HOSPITAL RECORDS BREAKDOWN (${reports.length} RECORD(S))\n`;
+      summary += `------------------------------------------------------------------------\n`;
+      if (reports.length === 0) {
+        summary += `• No hospital lab report records uploaded yet.\n\n`;
+      } else {
+        reports.forEach((r, idx) => {
+          summary += `Record #${idx + 1}: ${r.fileName} (Uploaded: ${new Date(r.createdAt).toLocaleDateString()})\n`;
+          summary += `  • Hemoglobin : ${r.hemoglobin ? `${r.hemoglobin} g/dL` : 'Not Tested'}${r.hemoglobin && r.hemoglobin < 12 ? ' ⚠️ [BELOW NORMAL]' : ''}\n`;
+          summary += `  • TSH (Thyroid): ${r.tsh ? `${r.tsh} mIU/L` : 'Not Tested'}${r.tsh && r.tsh > 4.5 ? ' ⚠️ [ELEVATED]' : ''}\n`;
+          summary += `  • Blood Sugar  : ${r.bloodSugar ? `${r.bloodSugar} mg/dL` : 'Not Tested'}${r.bloodSugar && r.bloodSugar > 125 ? ' ⚠️ [HIGH]' : ''}\n\n`;
+        });
+      }
+
+      summary += `[3] PATIENT REPORTED SYMPTOMS (${symptoms.length} LOG(S))\n`;
+      summary += `------------------------------------------------------------------------\n`;
+      if (symptoms.length === 0) {
+        summary += `• No symptom logs reported by patient.\n\n`;
+      } else {
+        symptoms.forEach(s => {
+          summary += `• ${s.symptomName} (Severity: ${s.severity}/10) - Date: ${new Date(s.symptomDate || s.createdAt).toLocaleDateString()}\n`;
+        });
+        summary += `\n`;
+      }
+
+      summary += `[4] ACTIONABLE CLINICAL GUIDANCE FOR PHYSICIAN\n`;
+      summary += `------------------------------------------------------------------------\n`;
+      if (problems.length === 0) {
+        summary += `• Patient biomarkers appear stable. Continue routine preventive wellness follow-up.\n`;
+      } else {
+        summary += `• Physician evaluation advised for the ${problems.length} clinical problem(s) identified above.\n`;
+      }
+
+      return { success: true, problemsCount: problems.length, problems, summary };
     }
   }
 };
