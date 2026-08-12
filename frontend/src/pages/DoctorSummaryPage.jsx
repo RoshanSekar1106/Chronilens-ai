@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileCheck, Copy, Printer, CheckCircle2, Stethoscope, RefreshCw, AlertTriangle, Activity } from 'lucide-react';
+import { FileCheck, Copy, Printer, CheckCircle2, Stethoscope, RefreshCw, AlertTriangle } from 'lucide-react';
 import { aiService } from '../services/api';
 
 export const DoctorSummaryPage = () => {
@@ -42,15 +42,15 @@ export const DoctorSummaryPage = () => {
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+      {/* Page Title & Control Bar (Hidden on Print) */}
+      <div className="no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1 style={{ fontSize: '1.8rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             <FileCheck size={28} color="#10b981" />
             Doctor Summary Generator
           </h1>
           <p className="text-sub">
-            Aggregates multiple hospital records & symptom logs into an executive, easy-to-read clinical report for doctors.
+            Aggregates multiple hospital records & symptom logs into a sharp, easy-to-read clinical report for doctors.
           </p>
         </div>
 
@@ -76,7 +76,8 @@ export const DoctorSummaryPage = () => {
         </div>
       </div>
 
-      <div className="glass-card" style={{ padding: '2.5rem', maxWidth: '950px', margin: '0 auto', width: '100%' }}>
+      {/* Doctor Summary Printable Document Container */}
+      <div className="glass-card doctor-summary-print-container" style={{ padding: '2.5rem', maxWidth: '950px', margin: '0 auto', width: '100%' }}>
         
         {/* Report Top Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '2px solid var(--border-glow)', paddingBottom: '1.2rem', marginBottom: '1.8rem', flexWrap: 'wrap', gap: '1rem' }}>
@@ -140,12 +141,12 @@ export const DoctorSummaryPage = () => {
               </div>
             )}
 
-            {/* Formatted Full Pre Output */}
-            <div style={{ background: 'rgba(9, 13, 22, 0.8)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '2rem' }}>
+            {/* High Contrast Doctor Summary Text Box */}
+            <div className="doctor-summary-text-box" style={{ background: 'rgba(9, 13, 22, 0.85)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '2rem' }}>
               <pre style={{
                 fontFamily: "'JetBrains Mono', monospace",
                 fontSize: '0.92rem',
-                color: 'var(--text-main)',
+                color: '#ffffff',
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',
                 lineHeight: 1.6

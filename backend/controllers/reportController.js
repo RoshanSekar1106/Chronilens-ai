@@ -1,5 +1,7 @@
 const Report = require("../models/Report");
 const Tesseract = require("tesseract.js");
+const pdfParse = require("pdf-parse");
+const fs = require("fs");
 
 // Upload Report
 const uploadReport = async (req, res) => {
@@ -145,7 +147,7 @@ const deleteAllReports = async (req, res) => {
   }
 };
 
-// OCR Extraction
+// OCR & PDF Text Extraction
 const extractTextFromReport = async (req, res) => {
   try {
     const report = await Report.findById(req.params.id);
@@ -157,15 +159,18 @@ const extractTextFromReport = async (req, res) => {
       });
     }
 
-    if (report.fileName.toLowerCase().endsWith(".pdf")) {
-      return res.status(400).json({
-        success: false,
-        message: "PDF OCR is not supported. Please upload JPG, JPEG or PNG.",
-      });
-    }
+    let text = "";
 
-    const result = await Tesseract.recognize(report.filePath, "eng");
-    const text = result.data.text;
+    if (report.fileName.toLowerCase().endsWith(".pdf")) {
+      // PDF Processing using pdf-parse
+      const dataBuffer = fs.readFileSync(report.filePath);
+      const pdfData = await pdfParse(dataBuffer);
+      text = pdfData.text || "";
+    } else {
+      // Image OCR Processing using Tesseract.js
+      const result = await Tesseract.recognize(report.filePath, "eng");
+      text = result.data.text || "";
+    }
 
     report.extractedText = text;
 
@@ -188,7 +193,7 @@ const extractTextFromReport = async (req, res) => {
       bloodSugar: report.bloodSugar,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Extraction error:", error);
     res.status(500).json({
       success: false,
       message: error.message,
